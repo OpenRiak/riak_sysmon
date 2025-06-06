@@ -1,4 +1,7 @@
-%% Copyright (c) 2011 Basho Technologies, Inc.  All Rights Reserved.
+%% -*- mode: erlang; erlang-indent-level: 4; indent-tabs-mode: nil -*-
+%% -------------------------------------------------------------------
+%%
+%% Copyright (c) 2011 Basho Technologies, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -13,13 +16,14 @@
 %% KIND, either express or implied.  See the License for the
 %% specific language governing permissions and limitations
 %% under the License.
-
+%%
+%% -------------------------------------------------------------------
+%%
 %% @doc Riak_sysmon: a rate-limiting, gen_event-based mechanism to
 %% allow multiple parties/processes/applications to share
 %% erlang:system_monitor/2 system events safely.
-
+%%
 -module(riak_sysmon_app).
-
 -behaviour(application).
 
 %% Application callbacks
@@ -31,18 +35,11 @@
 
 %%--------------------------------------------------------------------
 %% @private
-%% @doc
 %% This function is called whenever an application is started using
 %% application:start/[1,2], and should start the processes of the
 %% application. If the application is structured according to the OTP
 %% design principles as a supervision tree, this means starting the
 %% top supervisor of the tree.
-%%
-%% @spec start(StartType, StartArgs) -> {ok, Pid} |
-%%                                      {ok, Pid, State} |
-%%                                      {error, Reason}
-%%      StartType = normal | {takeover, Node} | {failover, Node}
-%%      StartArgs = term()
 %% @end
 %%--------------------------------------------------------------------
 start(_StartType, _StartArgs) ->
@@ -55,17 +52,10 @@ start(_StartType, _StartArgs) ->
 
 %%--------------------------------------------------------------------
 %% @private
-%% @doc
 %% This function is called whenever an application has stopped. It
 %% is intended to be the opposite of Module:start/2 and should do
 %% any necessary cleaning up. The return value is ignored.
-%%
-%% @spec stop(State) -> void()
 %% @end
 %%--------------------------------------------------------------------
 stop(_State) ->
     ok.
-
-%%%===================================================================
-%%% Internal functions
-%%%===================================================================

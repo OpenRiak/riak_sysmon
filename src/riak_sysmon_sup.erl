@@ -1,4 +1,7 @@
-%% Copyright (c) 2011 Basho Technologies, Inc.  All Rights Reserved.
+%% -*- mode: erlang; erlang-indent-level: 4; indent-tabs-mode: nil -*-
+%% -------------------------------------------------------------------
+%%
+%% Copyright (c) 2011 Basho Technologies, Inc.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -13,9 +16,10 @@
 %% KIND, either express or implied.  See the License for the
 %% specific language governing permissions and limitations
 %% under the License.
-
+%%
+%% -------------------------------------------------------------------
+%%
 -module(riak_sysmon_sup).
-
 -behaviour(supervisor).
 
 %% API
@@ -31,8 +35,6 @@
 %%--------------------------------------------------------------------
 %% @doc
 %% Starts the supervisor
-%%
-%% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
 start_link() ->
@@ -44,15 +46,10 @@ start_link() ->
 
 %%--------------------------------------------------------------------
 %% @private
-%% @doc
 %% Whenever a supervisor is started using supervisor:start_link/[2,3],
 %% this function is called by the new process to find out about
 %% restart strategy, maximum restart frequency and child
 %% specifications.
-%%
-%% @spec init(Args) -> {ok, {SupFlags, [ChildSpec]}} |
-%%                     ignore |
-%%                     {error, Reason}
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
@@ -73,7 +70,3 @@ init([]) ->
               Restart, Shutdown, Type, []},
 
     {ok, {SupFlags, [Filter, Handler]}}.
-
-%%%===================================================================
-%%% Internal functions
-%%%===================================================================

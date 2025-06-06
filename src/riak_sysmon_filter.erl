@@ -1,3 +1,4 @@
+%% -*- mode: erlang; erlang-indent-level: 4; indent-tabs-mode: nil -*-
 %% -------------------------------------------------------------------
 %%
 %% Copyright (c) 2011-2017 Basho Technologies, Inc.
@@ -17,28 +18,28 @@
 %% under the License.
 %%
 %% -------------------------------------------------------------------
-
+%%
 %% @doc Filtering/rate-limiting mechanism for the Erlang virtual machine's
 %% `system_monitor' events.
 %%
 %% See the `README.md' file at the top of the source repository for details.
+%%
 -module(riak_sysmon_filter).
-
 -behaviour(gen_server).
-
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
--endif. % TEST
 
 %% API
 -export([start_link/0, start_link/1]).
 -export([add_custom_handler/2, call_custom_handler/2, call_custom_handler/3]).
 
 %% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2]).
 -ifdef(TEST).
 -export([stop_timer/0, start_timer/0]).        % For testing use only!
+-endif. % TEST
+
+-include_lib("kernel/include/logger.hrl").
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
 -endif. % TEST
 
 -type sysmon_option() :: atom() | {atom(), pos_integer()}.
@@ -73,11 +74,7 @@
 %%  using them.
 -define(OLD_SUPPORTED_MONITORS, [port, dist_port, heap, gc, schedule]).
 
--ifdef(NO_NAMESPACED_TYPES).
--type port_list() :: gb_tree().
--else.
 -type port_list() :: gb_trees:tree().
--endif.
 
 -record(state, {
           proc_count = 0      :: integer(),
@@ -89,25 +86,28 @@
           tref                :: timer:tref() | undefined,
           bogus_msg_p = false :: boolean()
          }).
+-type state() :: #state{}.
 
 %%%===================================================================
 %%% API
 %%%===================================================================
 
+-spec start_link() -> {ok, pid()} | ignore | {error, term()}.
 %%--------------------------------------------------------------------
 %% @doc Start the riak_sysmon filter process, monitoring all supported events.
 %%
-%% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
 start_link() ->
     start_link(?SUPPORTED_MONITORS).
 
+-spec start_link(MonitorProps :: proplists:proplist())
+        -> {ok, pid()} | ignore | {error, term()}.
 %%--------------------------------------------------------------------
 %% @doc Start the riak_sysmon filter process, monitoring specified events.
 %%
 %% The `MonitorProps' arg is a property list that may contain zero or more
-%% of the following atoms, descibed in detail in the documentation fo the
+%% of the following atoms, described in detail in the documentation for the
 %% `erlang:system_monitor/2' function:
 %% <ul>
 %% <li> <b>busy_port</b> Enable process `busy_port' events.
@@ -164,15 +164,11 @@ call_custom_handler(Module, Call, Timeout) ->
 %%% gen_server callbacks
 %%%===================================================================
 
+-spec init(MonitorProps :: proplists:proplist()) -> {ok, state()}.
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
 %% Initializes the server
-%%
-%% @spec init(Args) -> {ok, State} |
-%%                     {ok, State, Timeout} |
-%%                     ignore |
-%%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
 init(MonitorProps) ->
@@ -189,14 +185,6 @@ init(MonitorProps) ->
 %% @private
 %% @doc
 %% Handling call messages
-%%
-%% @spec handle_call(Request, From, State) ->
-%%                                   {reply, Reply, State} |
-%%                                   {reply, Reply, State, Timeout} |
-%%                                   {noreply, State} |
-%%                                   {noreply, State, Timeout} |
-%%                                   {stop, Reason, Reply, State} |
-%%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
 handle_call(stop_timer, _From, State) ->
@@ -213,10 +201,6 @@ handle_call(_Request, _From, State) ->
 %% @private
 %% @doc
 %% Handling cast messages
-%%
-%% @spec handle_cast(Msg, State) -> {noreply, State} |
-%%                                  {noreply, State, Timeout} |
-%%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
 handle_cast(_Msg, State) ->
@@ -226,10 +210,6 @@ handle_cast(_Msg, State) ->
 %% @private
 %% @doc
 %% Handling all non call/cast messages
-%%
-%% @spec handle_info(Info, State) -> {noreply, State} |
-%%                                   {noreply, State, Timeout} |
-%%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
 handle_info({monitor, _, ProcType, _} = Info,
@@ -264,7 +244,7 @@ handle_info({monitor, X, PortType, Port},
                                   port_list = NewPortList}}
     end;
 handle_info({monitor, _, _, _} = Info, #state{bogus_msg_p = false} = State) ->
-    error_logger:error_msg("Unknown monitor message: ~P\n", [Info, 20]),
+    ?LOG_ERROR("Unknown monitor message: ~tP", [Info, 20]),
     {noreply, State#state{bogus_msg_p = true}};
 handle_info(reset, #state{proc_count = Procs, proc_limit = ProcLimit,
                           port_count = Ports, port_limit = PortLimit} = State)->
@@ -284,8 +264,7 @@ handle_info(reset, #state{proc_count = Procs, proc_limit = ProcLimit,
         {Pid, _} when Pid == self() ->
             ok;
         Res ->
-            error_logger:error_msg("~s: current system monitor is: ~P\n",
-                                   [?MODULE, Res, 20])
+            ?LOG_ERROR("current system monitor is: ~tP", [Res, 20])
     end,
     {noreply, State#state{proc_count = 0,
                           port_count = 0,
@@ -293,31 +272,6 @@ handle_info(reset, #state{proc_count = Procs, proc_limit = ProcLimit,
                           node_map = get_node_map()}};
 handle_info(_Info, State) ->
     {noreply, State}.
-
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% This function is called by a gen_server when it is about to
-%% terminate. It should be the opposite of Module:init/1 and do any
-%% necessary cleaning up. When it returns, the gen_server terminates
-%% with Reason. The return value is ignored.
-%%
-%% @spec terminate(Reason, State) -> void()
-%% @end
-%%--------------------------------------------------------------------
-terminate(_Reason, _State) ->
-    ok.
-
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Convert process state when code is changed
-%%
-%% @spec code_change(OldVsn, State, Extra) -> {ok, NewState}
-%% @end
-%%--------------------------------------------------------------------
-code_change(_OldVsn, State, _Extra) ->
-    {ok, State}.
 
 %%%===================================================================
 %%% Internal functions
@@ -473,8 +427,7 @@ get_node_map() ->
                 end
          end || T <- ets:tab2list(sys_dist)]
     catch Class:Reason:Stacktrace ->
-            error_logger:error_msg("~s:get_node_map: ~p ~p @ ~p\n",
-                                   [?MODULE, Class, Reason, Stacktrace]),
+            ?LOG_ERROR("~0tp ~0tp @ ~tp", [Class, Reason, Stacktrace]),
             []
     end.
 
